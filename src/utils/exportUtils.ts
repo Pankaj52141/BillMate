@@ -48,7 +48,7 @@ export const downloadPDF = async (elementId: string, filename: string = 'invoice
     document.head.appendChild(exportStyle);
 
     const canvas = await html2canvas(exportElement, {
-      scale: Math.min(2, window.devicePixelRatio || 1.5),
+      scale: 4, // Increased scale for much crisper text when zoomed
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,

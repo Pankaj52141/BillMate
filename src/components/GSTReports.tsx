@@ -24,7 +24,8 @@ const GSTReports = ({ onBack }: GSTReportsProps) => {
   const { invoices, loading } = useInvoices();
   const { toast } = useToast();
 
-  const years = Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - i);
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 7 }, (_, i) => currentYear + 1 - i);
 
   const filteredInvoices = useMemo(() => invoices.filter(inv => {
     if (inv.company_type !== selectedCompany) return false;

@@ -48,7 +48,7 @@ export const InvoicePreview = ({ invoiceData }: InvoicePreviewProps) => {
         width: "100%",
         maxWidth: "794px",
         fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif",
-        fontSize: "13px",
+        fontSize: "14px",
         lineHeight: "1.4",
         padding: "0",
         boxSizing: "border-box",
@@ -58,24 +58,24 @@ export const InvoicePreview = ({ invoiceData }: InvoicePreviewProps) => {
 
         {/* ═══ HEADER ═══ */}
         <div className="invoice-header" style={{ textAlign: "center", borderBottom: "2px solid #1a1a2e", paddingBottom: "16px", marginBottom: "20px" }}>
-          <h1 style={{ fontSize: "22px", fontWeight: 700, color: "#1a1a2e", margin: "0 0 4px", letterSpacing: "0.5px" }}>
+          <h1 style={{ fontSize: "23px", fontWeight: 700, color: "#1a1a2e", margin: "0 0 4px", letterSpacing: "0.5px" }}>
             Tax Invoice
           </h1>
-          <h2 style={{ fontSize: "17px", fontWeight: 700, color: "#1a1a2e", margin: "0 0 6px" }}>
+          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#1a1a2e", margin: "0 0 6px" }}>
             {company.name}
           </h2>
           {company.proprietor && (
-            <p style={{ fontSize: "11px", color: "#555", margin: "0 0 2px" }}>
+            <p style={{ fontSize: "12px", color: "#555", margin: "0 0 2px" }}>
               Proprietor: {company.proprietor}
             </p>
           )}
-          <p style={{ fontSize: "11px", color: "#555", margin: "0 0 1px" }}>
+          <p style={{ fontSize: "12px", color: "#555", margin: "0 0 1px" }}>
             {company.address}, {company.city}, {company.state} - {company.pin}
           </p>
-          <p style={{ fontSize: "11px", color: "#555", margin: "0 0 1px" }}>
+          <p style={{ fontSize: "12px", color: "#555", margin: "0 0 1px" }}>
             Email: {company.email}
           </p>
-          <p style={{ fontSize: "12px", color: "#1a1a2e", fontWeight: 600, margin: "4px 0 0" }}>
+          <p style={{ fontSize: "13px", color: "#1a1a2e", fontWeight: 600, margin: "4px 0 0" }}>
             GSTIN: {company.gstin}
           </p>
         </div>
@@ -144,7 +144,7 @@ export const InvoicePreview = ({ invoiceData }: InvoicePreviewProps) => {
 
         {/* ═══ ITEMIZED LIST ═══ */}
         <div style={{ marginBottom: "18px" }}>
-          <h3 style={{ fontSize: "13px", fontWeight: 700, color: "#1a1a2e", margin: "0 0 8px" }}>Itemized List:</h3>
+          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#1a1a2e", margin: "0 0 8px" }}>Itemized List:</h3>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ backgroundColor: "#f3f4f6" }}>
@@ -200,7 +200,7 @@ export const InvoicePreview = ({ invoiceData }: InvoicePreviewProps) => {
               <td style={{
                 ...summaryLabelCell,
                 borderTop: "2px solid #1a1a2e",
-                fontSize: "14px",
+                fontSize: "15px",
                 fontWeight: 700,
                 color: "#1a1a2e",
                 paddingTop: "10px",
@@ -210,7 +210,7 @@ export const InvoicePreview = ({ invoiceData }: InvoicePreviewProps) => {
               <td style={{
                 ...summaryValueCell,
                 borderTop: "2px solid #1a1a2e",
-                fontSize: "15px",
+                fontSize: "16px",
                 fontWeight: 700,
                 color: "#1a1a2e",
                 paddingTop: "10px",
@@ -225,7 +225,7 @@ export const InvoicePreview = ({ invoiceData }: InvoicePreviewProps) => {
         <div style={{ textAlign: "right", marginTop: "60px" }}>
           <div style={{ display: "inline-block", textAlign: "center" }}>
             <div style={{ width: "180px", borderBottom: "1px solid #9ca3af", marginBottom: "6px", height: "50px" }} />
-            <p style={{ fontSize: "11px", fontWeight: 600, color: "#555", margin: 0 }}>Authorized Signature</p>
+            <p style={{ fontSize: "12px", fontWeight: 600, color: "#555", margin: 0 }}>Authorized Signature</p>
           </div>
         </div>
       </div>
@@ -239,18 +239,18 @@ const cellStyle: React.CSSProperties = {
   border: "1px solid #d1d5db",
   padding: "8px 10px",
   verticalAlign: "top",
-  fontSize: "12px",
+  fontSize: "13px",
   lineHeight: "1.5",
 };
 
 const labelStyle: React.CSSProperties = {
-  fontSize: "11px",
+  fontSize: "12px",
   fontWeight: 600,
   color: "#6b7280",
 };
 
 const valueStyle: React.CSSProperties = {
-  fontSize: "12px",
+  fontSize: "13px",
   fontWeight: 600,
   color: "#111827",
 };
@@ -258,7 +258,7 @@ const valueStyle: React.CSSProperties = {
 const thStyle: React.CSSProperties = {
   border: "1px solid #d1d5db",
   padding: "8px 10px",
-  fontSize: "12px",
+  fontSize: "13px",
   fontWeight: 700,
   color: "#374151",
   textAlign: "center",
@@ -267,14 +267,14 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = {
   border: "1px solid #d1d5db",
   padding: "7px 10px",
-  fontSize: "12px",
+  fontSize: "13px",
   color: "#111827",
 };
 
 const summaryLabelCell: React.CSSProperties = {
   textAlign: "right",
   padding: "6px 14px",
-  fontSize: "12px",
+  fontSize: "13px",
   fontWeight: 500,
   color: "#374151",
   border: "none",
@@ -283,7 +283,7 @@ const summaryLabelCell: React.CSSProperties = {
 const summaryValueCell: React.CSSProperties = {
   textAlign: "right",
   padding: "6px 14px",
-  fontSize: "13px",
+  fontSize: "14px",
   fontWeight: 600,
   color: "#111827",
   width: "160px",

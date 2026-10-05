@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { InvoicePreview } from "./InvoicePreview";
 import { InvoiceHistory } from "./InvoiceHistory";
 import GSTReports from "./GSTReports";
-import { FileText, Plus, Trash2, RotateCcw, Calculator, Download, FileSpreadsheet, Save, History, LogOut, X, Loader2, Building2 } from "lucide-react";
+import { FileText, Plus, Trash2, RotateCcw, Calculator, Download, FileSpreadsheet, Save, History, LogOut, X, Loader2, Building2, ArrowLeft } from "lucide-react";
 import { downloadPDF, exportToExcel } from "@/utils/exportUtils";
 import { useInvoices, StoredInvoice } from "@/hooks/useInvoices";
 import { useAddresses } from "@/hooks/useAddresses";
@@ -83,6 +83,7 @@ const SimpleInvoiceForm = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [pendingDownload, setPendingDownload] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showGSTReports, setShowGSTReports] = useState(false);
@@ -121,6 +122,7 @@ const SimpleInvoiceForm = () => {
   }, [invoiceCounter]);
 
   useEffect(() => {
+    if (viewingInvoice) return;
     (async () => {
       try {
         const nextNo = await getNextInvoiceNo(formData.company);
@@ -130,7 +132,27 @@ const SimpleInvoiceForm = () => {
       } catch (e) { /* fallback */ }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.company]);
+  }, [formData.company, viewingInvoice]);
+
+  // Auto-download PDF after preview renders from "Save & Download" on main form
+  useEffect(() => {
+    if (pendingDownload && showPreview && isSaved) {
+      const timer = setTimeout(async () => {
+        try {
+          setIsDownloading(true);
+          await downloadPDF('invoice-preview', `${formData.invoiceNo.replace('/', '_')}_${formData.customerName.replace(/\s+/g, '_')}.pdf`);
+          toast({ title: "Success", description: "Invoice saved & PDF downloaded!" });
+        } catch {
+          toast({ title: "Error", description: "Saved but failed to download PDF", variant: "destructive" });
+        } finally {
+          setIsDownloading(false);
+          setPendingDownload(false);
+        }
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingDownload, showPreview, isSaved]);
 
   const addItem = () => {
     setFormData(prev => ({
@@ -195,25 +217,47 @@ const SimpleInvoiceForm = () => {
 
   const { subtotal, cgst, sgst, igst, total, isJharkhand } = calculateTotals();
 
-  const handleSaveInvoice = async () => {
+  const handleSaveAndDownload = async () => {
     try {
       setIsSaving(true);
       const saved = await saveInvoice(formData, { subtotal, cgst, sgst, igst, total });
       if (saved) {
         setIsSaved(true); setViewingInvoice(saved);
+        const invoiceNo = saved.invoice_no || formData.invoiceNo;
         if (saved.invoice_no && saved.invoice_no !== formData.invoiceNo) {
           const numeric = parseInt((saved.invoice_no.split('/')[1] || '1').replace(/[^0-9]/g, ''), 10) || invoiceCounter + 1;
           setInvoiceCounter(numeric);
           setFormData(prev => ({ ...prev, invoiceNo: saved.invoice_no }));
         }
         setInvoiceCounter(prev => prev + 1);
+
+        if (showPreview) {
+          // Already in preview — download directly
+          setIsSaving(false);
+          try {
+            setIsDownloading(true);
+            await downloadPDF('invoice-preview', `${invoiceNo.replace('/', '_')}_${formData.customerName.replace(/\s+/g, '_')}.pdf`);
+            toast({ title: "Success", description: "Invoice saved & PDF downloaded!" });
+          } catch {
+            toast({ title: "Error", description: "Saved but failed to download PDF", variant: "destructive" });
+          } finally {
+            setIsDownloading(false);
+          }
+          return;
+        }
+        // From main form — show preview, useEffect will trigger download
+        setPendingDownload(true);
+        setShowPreview(true);
       }
-    } catch (error) { console.error('Error saving invoice:', error); }
-    finally { setIsSaving(false); }
+    } catch (error) {
+      console.error('Error saving invoice:', error);
+      toast({ title: "Error", description: "Failed to save invoice", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDownloadPDF = async () => {
-    if (!isSaved && !viewingInvoice) { toast({ title: "Save Required", description: "Save first before downloading.", variant: "destructive" }); return; }
     try {
       setIsDownloading(true);
       await downloadPDF('invoice-preview', `${formData.invoiceNo.replace('/', '_')}_${formData.customerName.replace(/\s+/g, '_')}.pdf`);
@@ -241,14 +285,23 @@ const SimpleInvoiceForm = () => {
       shippingAddress: invoice.shipping_address || "", state: invoice.state, stateCode: invoice.state_code,
       items: typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items
     };
-    setFormData(invoiceData); setViewingInvoice(invoice); setShowHistory(false); setShowPreview(true);
+    setFormData(invoiceData); setViewingInvoice(invoice); setIsSaved(true); setShowHistory(false); setShowPreview(true);
   };
 
   // ── GST Reports ──
   if (showGSTReports) return <GSTReports onBack={() => setShowGSTReports(false)} />;
 
   // ── History ──
-  if (showHistory) return <InvoiceHistory onViewInvoice={handleViewStoredInvoice} onBack={() => setShowHistory(false)} />;
+  if (showHistory) return <InvoiceHistory onViewInvoice={handleViewStoredInvoice} onBack={() => {
+    setShowHistory(false);
+    setFormData(prev => ({
+      ...prev, customerName: "", hsn: "25171010", gstin: "", vehicleNo: "", permitNo: "",
+      shippingAddress: "", state: "", stateCode: "",
+      items: [{ id: Date.now().toString(), product: "", quantity: "" as any, unit: "CFT", rate: "" as any }]
+    }));
+    setIsSaved(false); setViewingInvoice(null); setSelectedAddressId("");
+    resetInvoiceNumber();
+  }} />;
 
   // ── Preview ──
   if (showPreview) {
@@ -257,30 +310,56 @@ const SimpleInvoiceForm = () => {
         <div className="max-w-4xl mx-auto space-y-4">
           {/* Header */}
           <div className="glass-card-strong rounded-2xl p-4 md:p-5">
-            <h1 className="text-lg md:text-2xl font-semibold text-foreground mb-3">Invoice Preview</h1>
+            <div className="flex items-center gap-3 mb-3">
+              <Button variant="ghost" size="sm" onClick={() => {
+                // Always clean up and go to history when viewing a stored invoice
+                setShowPreview(false);
+                if (viewingInvoice) {
+                  setFormData({
+                    company: "maa-durga",
+                    invoiceNo: "",
+                    invoiceDate: new Date().toISOString().split('T')[0],
+                    customerName: "",
+                    hsn: "25171010",
+                    gstin: "",
+                    vehicleNo: "",
+                    permitNo: "",
+                    shippingAddress: "",
+                    state: "",
+                    stateCode: "",
+                    items: [{ id: Date.now().toString(), product: "", quantity: "" as any, unit: "CFT", rate: "" as any }]
+                  });
+                  setViewingInvoice(null);
+                  setIsSaved(false);
+                  setSelectedAddressId("");
+                  setShowHistory(true);
+                  resetInvoiceNumber();
+                }
+              }} className="shrink-0 h-10 w-10 p-0 rounded-xl hover:bg-white/[0.06]">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-lg md:text-2xl font-semibold text-foreground">Invoice Preview</h1>
+            </div>
             {/* Desktop actions */}
             <div className="hidden md:flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => { setShowPreview(false); setViewingInvoice(null); }} className="rounded-xl h-9 text-sm border-white/10 hover:bg-white/5">
-                {viewingInvoice ? "Back" : "Edit"}
-              </Button>
-              <Button variant="outline" onClick={() => setShowHistory(true)} className="rounded-xl h-9 text-sm border-white/10 hover:bg-white/5">
-                <History className="h-3.5 w-3.5 mr-1.5" />History
-              </Button>
-              {!viewingInvoice && (
-                <Button onClick={handleSaveInvoice} disabled={isSaved || isSaving} className="rounded-xl h-9 text-sm bg-primary hover:bg-primary/90">
-                  {isSaving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
-                  {isSaving ? "Saving..." : "Save"}
+              {!isSaved && !viewingInvoice ? (
+                <Button onClick={handleSaveAndDownload} disabled={isSaving || isDownloading} className="rounded-xl h-9 text-sm bg-success hover:bg-success/90">
+                  {(isSaving || isDownloading) ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}
+                  {isSaving ? "Saving..." : isDownloading ? "Downloading..." : "Save & Download"}
                 </Button>
+              ) : (
+                <>
+                  <Button onClick={handleDownloadPDF} disabled={isDownloading} className="rounded-xl h-9 text-sm bg-success hover:bg-success/90">
+                    {isDownloading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}PDF
+                  </Button>
+                  <Button onClick={handleExportExcel} disabled={isExporting} className="rounded-xl h-9 text-sm bg-primary hover:bg-primary/90">
+                    {isExporting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />}Excel
+                  </Button>
+                </>
               )}
-              <Button onClick={handleDownloadPDF} disabled={(!isSaved && !viewingInvoice) || isDownloading} className="rounded-xl h-9 text-sm bg-success hover:bg-success/90">
-                {isDownloading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />}PDF
-              </Button>
-              <Button onClick={handleExportExcel} disabled={(!isSaved && !viewingInvoice) || isExporting} className="rounded-xl h-9 text-sm bg-primary hover:bg-primary/90">
-                {isExporting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />}Excel
-              </Button>
-              {!viewingInvoice && (
+              {(isSaved || viewingInvoice) && (
                 <Button onClick={generateNewInvoice} variant="outline" className="rounded-xl h-9 text-sm border-white/10 hover:bg-white/5">
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />New
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />New Invoice
                 </Button>
               )}
             </div>
@@ -292,10 +371,43 @@ const SimpleInvoiceForm = () => {
         {/* Mobile bottom bar */}
         <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bottom-nav">
           <div className="flex items-center gap-2 p-3 overflow-x-auto">
-            <Button variant="outline" size="sm" onClick={() => { setShowPreview(false); setViewingInvoice(null); }} className="shrink-0 h-10 rounded-xl text-xs border-white/10">{viewingInvoice ? "Back" : "Edit"}</Button>
-            {!viewingInvoice && <Button size="sm" onClick={handleSaveInvoice} disabled={isSaved || isSaving} className="shrink-0 h-10 rounded-xl text-xs bg-primary">{isSaving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}Save</Button>}
-            <Button size="sm" onClick={handleDownloadPDF} disabled={(!isSaved && !viewingInvoice) || isDownloading} className="shrink-0 h-10 rounded-xl text-xs bg-success">{isDownloading ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}PDF</Button>
-            <Button size="sm" onClick={handleExportExcel} disabled={(!isSaved && !viewingInvoice) || isExporting} className="shrink-0 h-10 rounded-xl text-xs bg-primary">{isExporting ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5 mr-1" />}Excel</Button>
+            <Button variant="outline" size="sm" onClick={() => {
+              setShowPreview(false);
+              if (viewingInvoice) {
+                setFormData({
+                  company: "maa-durga",
+                  invoiceNo: "",
+                  invoiceDate: new Date().toISOString().split('T')[0],
+                  customerName: "",
+                  hsn: "25171010",
+                  gstin: "",
+                  vehicleNo: "",
+                  permitNo: "",
+                  shippingAddress: "",
+                  state: "",
+                  stateCode: "",
+                  items: [{ id: Date.now().toString(), product: "", quantity: "" as any, unit: "CFT", rate: "" as any }]
+                });
+                setViewingInvoice(null);
+                setIsSaved(false);
+                setSelectedAddressId("");
+                setShowHistory(true);
+                resetInvoiceNumber();
+              }
+            }} className="shrink-0 h-10 rounded-xl text-xs border-white/10">
+              <ArrowLeft className="h-3.5 w-3.5 mr-1" />{viewingInvoice ? "Back" : "Edit"}
+            </Button>
+            {!isSaved && !viewingInvoice ? (
+              <Button size="sm" onClick={handleSaveAndDownload} disabled={isSaving || isDownloading} className="shrink-0 h-10 rounded-xl text-xs bg-success">
+                {(isSaving || isDownloading) ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                {isSaving ? "Saving..." : "Save & Download"}
+              </Button>
+            ) : (
+              <>
+                <Button size="sm" onClick={handleDownloadPDF} disabled={isDownloading} className="shrink-0 h-10 rounded-xl text-xs bg-success">{isDownloading ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}PDF</Button>
+                <Button size="sm" onClick={handleExportExcel} disabled={isExporting} className="shrink-0 h-10 rounded-xl text-xs bg-primary">{isExporting ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5 mr-1" />}Excel</Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -385,7 +497,7 @@ const SimpleInvoiceForm = () => {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Vehicle Number</Label>
-                <Input value={formData.vehicleNo} onChange={(e) => updateFormField("vehicleNo", e.target.value)} placeholder="JH 01 AB 1234" className="h-11 rounded-xl glass-input" />
+                <Input value={formData.vehicleNo} onChange={(e) => updateFormField("vehicleNo", e.target.value.toUpperCase())} placeholder="JH 01 AB 1234" className="h-11 rounded-xl glass-input uppercase" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">Permit Number</Label>
@@ -556,9 +668,9 @@ const SimpleInvoiceForm = () => {
                 <Button onClick={() => setShowPreview(true)} className="h-11 rounded-xl bg-primary hover:bg-primary/90">
                   <FileText className="h-4 w-4 mr-2" />Preview Invoice
                 </Button>
-                <Button onClick={handleSaveInvoice} disabled={isSaved || isSaving} className="h-11 rounded-xl bg-success hover:bg-success/90">
-                  {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                  {isSaving ? "Saving..." : "Save Invoice"}
+                <Button onClick={handleSaveAndDownload} disabled={isSaved || isSaving || isDownloading} className="h-11 rounded-xl bg-success hover:bg-success/90">
+                  {(isSaving || isDownloading) ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                  {isSaving ? "Saving..." : isDownloading ? "Downloading..." : "Save & Download"}
                 </Button>
               </div>
               <div className="text-right">

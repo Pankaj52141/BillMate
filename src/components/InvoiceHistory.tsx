@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileSpreadsheet, Trash2, Eye, History, Building, Calendar, IndianRupee, FileDown, ArrowLeft, RefreshCw } from "lucide-react";
 import { useInvoices, StoredInvoice } from "@/hooks/useInvoices";
@@ -32,7 +32,7 @@ export const InvoiceHistory = ({ onViewInvoice, onBack }: InvoiceHistoryProps) =
       company: invoice.company_type as any, invoiceNo: invoice.invoice_no, invoiceDate: invoice.invoice_date,
       customerName: invoice.customer_name, hsn: invoice.hsn, gstin: invoice.gstin,
       vehicleNo: invoice.vehicle_no || "", permitNo: invoice.permit_no || "",
-      shippingAddress: invoice.shipping_address || "", state: invoice.state, stateCode: invoice.state_code, items: invoice.items
+      shippingAddress: invoice.shipping_address || "", state: invoice.state, stateCode: invoice.state_code, items: typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items
     };
     exportToExcel(data, { subtotal: invoice.subtotal, cgst: invoice.cgst || 0, sgst: invoice.sgst || 0, igst: invoice.igst || 0, total: invoice.total_amount });
   };
@@ -95,17 +95,17 @@ export const InvoiceHistory = ({ onViewInvoice, onBack }: InvoiceHistoryProps) =
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground truncate mr-2">{inv.customer_name}</span>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">{new Date(inv.invoice_date).toLocaleDateString()}</span>
+                      <div className="flex flex-col items-end">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">{new Date(inv.invoice_date).toLocaleDateString()}</span>
+                        <span className="text-[10px] text-muted-foreground/60 whitespace-nowrap">{new Date(inv.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-0.5 font-bold text-base text-primary"><IndianRupee className="h-3.5 w-3.5" />{inv.total_amount.toLocaleString()}</div>
                       <div className="flex gap-1.5">
                         <Button variant="outline" size="sm" onClick={() => onViewInvoice(inv)} className="h-8 w-8 p-0 rounded-lg border-white/10"><Eye className="h-3.5 w-3.5" /></Button>
                         <Button variant="outline" size="sm" onClick={() => handleExportExcel(inv)} className="h-8 w-8 p-0 rounded-lg border-white/10"><FileSpreadsheet className="h-3.5 w-3.5" /></Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild><Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg border-white/10 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"><Trash2 className="h-3.5 w-3.5" /></Button></AlertDialogTrigger>
-                          <AlertDialogContent className="mx-4 rounded-2xl"><AlertDialogHeader><AlertDialogTitle>Delete Invoice</AlertDialogTitle><AlertDialogDescription>Delete {inv.invoice_no}? Cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(inv.id)} className="bg-destructive hover:bg-destructive/90 rounded-xl">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                        </AlertDialog>
+                        <Button variant="outline" size="sm" onClick={() => { if(window.confirm(`Delete ${inv.invoice_no}? Cannot be undone.`)) handleDelete(inv.id); }} className="h-8 w-8 p-0 rounded-lg border-white/10 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     </div>
                   </div>
@@ -121,16 +121,18 @@ export const InvoiceHistory = ({ onViewInvoice, onBack }: InvoiceHistoryProps) =
                         <TableCell className="font-medium">{inv.invoice_no}</TableCell>
                         <TableCell><Badge variant="secondary" className="text-xs">{formatCompanyName(inv.company_type)}</Badge></TableCell>
                         <TableCell>{inv.customer_name}</TableCell>
-                        <TableCell><span className="flex items-center gap-1.5 text-muted-foreground"><Calendar className="h-3.5 w-3.5" />{new Date(inv.invoice_date).toLocaleDateString()}</span></TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="flex items-center gap-1.5 text-muted-foreground"><Calendar className="h-3.5 w-3.5" />{new Date(inv.invoice_date).toLocaleDateString()}</span>
+                            <span className="text-[10px] text-muted-foreground/70 ml-5">{new Date(inv.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                          </div>
+                        </TableCell>
                         <TableCell><span className="flex items-center gap-0.5 font-semibold"><IndianRupee className="h-3.5 w-3.5" />{inv.total_amount.toLocaleString()}</span></TableCell>
                         <TableCell>
                           <div className="flex gap-1.5">
                             <Button variant="outline" size="sm" onClick={() => onViewInvoice(inv)} className="h-8 w-8 p-0 border-white/10"><Eye className="h-3.5 w-3.5" /></Button>
                             <Button variant="outline" size="sm" onClick={() => handleExportExcel(inv)} className="h-8 w-8 p-0 border-white/10"><FileSpreadsheet className="h-3.5 w-3.5" /></Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild><Button variant="outline" size="sm" className="h-8 w-8 p-0 border-white/10 hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button></AlertDialogTrigger>
-                              <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Delete Invoice</AlertDialogTitle><AlertDialogDescription>Delete {inv.invoice_no}? Cannot be undone.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(inv.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-                            </AlertDialog>
+                            <Button variant="outline" size="sm" onClick={() => { if(window.confirm(`Delete ${inv.invoice_no}? Cannot be undone.`)) handleDelete(inv.id); }} className="h-8 w-8 p-0 border-white/10 hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>

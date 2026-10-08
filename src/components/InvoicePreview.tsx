@@ -47,6 +47,8 @@ export const InvoicePreview = ({ invoiceData }: InvoicePreviewProps) => {
       style={{
         width: "100%",
         maxWidth: "794px",
+        minHeight: "1123px", // A4 aspect ratio: 794 * (297/210) ≈ 1123px
+        aspectRatio: "210 / 297",
         fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif",
         fontSize: "14px",
         lineHeight: "1.4",

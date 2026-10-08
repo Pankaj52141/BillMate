@@ -57,18 +57,26 @@ export const downloadPDF = async (elementId: string, filename: string = 'invoice
     });
 
     const pdfWidth = 210; // A4 width in mm
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pdfHeight = 297; // A4 height in mm (standard)
+    const contentHeight = (canvas.height * pdfWidth) / canvas.width;
     
-    // Create PDF with dynamic height matching the content
-    const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
+    // Create PDF with standard A4 size
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    // If content fits on one page, place it at the top of the A4 page
+    // If content is taller than A4, scale it down to fit
+    const imgHeight = Math.min(contentHeight, pdfHeight);
+    const imgWidth = contentHeight > pdfHeight
+      ? (canvas.width * pdfHeight) / canvas.height
+      : pdfWidth;
     
     pdf.addImage(
       canvas.toDataURL('image/jpeg', 0.95),
       'JPEG',
       0,
       0,
-      pdfWidth,
-      pdfHeight
+      imgWidth,
+      imgHeight
     );
 
     const blob = pdf.output('blob');

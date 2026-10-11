@@ -77,6 +77,11 @@ const INDIA_STATES = [
   { name: "West Bengal", code: "19" }
 ];
 
+const PREDEFINED_PRODUCTS = [
+  { value: "STONE CHIPS (no size)", label: "STONE CHIPS (no size)" },
+  { value: "STONE DUST", label: "STONE DUST" }
+];
+
 
 const SimpleInvoiceForm = () => {
   const [showPreview, setShowPreview] = useState(false);
@@ -477,11 +482,10 @@ const SimpleInvoiceForm = () => {
                   { key: "bhagwati" as const, name: "M/S BHAGWATI STONE WORKS", gstin: "20BMAPB5737J1ZH" }
                 ].map(co => (
                   <button key={co.key} onClick={() => updateFormField("company", co.key)}
-                    className={`rounded-xl p-3.5 text-left transition-all duration-200 border ${
-                      formData.company === co.key
-                        ? "bg-primary/10 border-primary/30"
-                        : "bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.12]"
-                    }`}>
+                    className={`rounded-xl p-3.5 text-left transition-all duration-200 border ${formData.company === co.key
+                      ? "bg-primary/10 border-primary/30"
+                      : "bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.12]"
+                      }`}>
                     <div className={`font-medium text-sm ${formData.company === co.key ? "text-primary" : "text-foreground"}`}>{co.name}</div>
                     <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">{co.gstin}</div>
                   </button>
@@ -570,8 +574,8 @@ const SimpleInvoiceForm = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">State</Label>
-                  <Select 
-                    value={formData.stateCode || ""} 
+                  <Select
+                    value={formData.stateCode || ""}
                     onValueChange={(code) => {
                       const stateName = INDIA_STATES.find(s => s.code === code)?.name || "";
                       setFormData(prev => ({ ...prev, stateCode: code, state: stateName }));
@@ -618,7 +622,31 @@ const SimpleInvoiceForm = () => {
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                      <Input value={item.product} onChange={(e) => updateItem(item.id, "product", e.target.value)} placeholder="Product name" className="h-10 rounded-lg glass-input" />
+                      <div className="space-y-1.5">
+                        <Select
+                          value={PREDEFINED_PRODUCTS.some(p => p.value === item.product) ? item.product : "__custom__"}
+                          onValueChange={(v) => {
+                            if (v === "__custom__") {
+                              updateItem(item.id, "product", "");
+                            } else {
+                              updateItem(item.id, "product", v);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-10 rounded-lg glass-input">
+                            <SelectValue placeholder="Select product" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PREDEFINED_PRODUCTS.map(p => (
+                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                            ))}
+                            <SelectItem value="__custom__">Custom (Manual Entry)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {!PREDEFINED_PRODUCTS.some(p => p.value === item.product) && (
+                          <Input value={item.product} onChange={(e) => updateItem(item.id, "product", e.target.value)} placeholder="Enter product name" className="h-10 rounded-lg glass-input" />
+                        )}
+                      </div>
                       <div className="grid grid-cols-3 gap-2">
                         <div className="space-y-1"><Label className="text-[10px] text-muted-foreground">Qty</Label><Input type="number" value={item.quantity} onWheel={(e) => e.currentTarget.blur()} onChange={(e) => updateItem(item.id, "quantity", Number(e.target.value))} className="h-9 rounded-lg glass-input text-sm appearance-none" /></div>
                         <div className="space-y-1"><Label className="text-[10px] text-muted-foreground">Unit</Label><Input value={item.unit} onChange={(e) => updateItem(item.id, "unit", e.target.value)} className="h-9 rounded-lg glass-input text-sm" /></div>
@@ -629,7 +657,32 @@ const SimpleInvoiceForm = () => {
 
                     {/* Desktop */}
                     <div className="hidden md:grid md:grid-cols-12 gap-2.5 items-end">
-                      <div className="col-span-4 space-y-1"><Label className="text-[11px] text-muted-foreground">Product</Label><Input value={item.product} onChange={(e) => updateItem(item.id, "product", e.target.value)} placeholder="Product name" className="h-10 rounded-lg glass-input" /></div>
+                      <div className="col-span-4 space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Product</Label>
+                        <Select
+                          value={PREDEFINED_PRODUCTS.some(p => p.value === item.product) ? item.product : "__custom__"}
+                          onValueChange={(v) => {
+                            if (v === "__custom__") {
+                              updateItem(item.id, "product", "");
+                            } else {
+                              updateItem(item.id, "product", v);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-10 rounded-lg glass-input">
+                            <SelectValue placeholder="Select product" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PREDEFINED_PRODUCTS.map(p => (
+                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                            ))}
+                            <SelectItem value="__custom__">Custom (Manual Entry)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {!PREDEFINED_PRODUCTS.some(p => p.value === item.product) && (
+                          <Input value={item.product} onChange={(e) => updateItem(item.id, "product", e.target.value)} placeholder="Enter product name" className="h-10 rounded-lg glass-input mt-1.5" />
+                        )}
+                      </div>
                       <div className="col-span-2 space-y-1"><Label className="text-[11px] text-muted-foreground">Qty</Label><Input type="number" value={item.quantity} onWheel={(e) => e.currentTarget.blur()} onChange={(e) => updateItem(item.id, "quantity", Number(e.target.value))} className="h-10 rounded-lg glass-input appearance-none" /></div>
                       <div className="col-span-2 space-y-1"><Label className="text-[11px] text-muted-foreground">Unit</Label><Input value={item.unit} onChange={(e) => updateItem(item.id, "unit", e.target.value)} className="h-10 rounded-lg glass-input" /></div>
                       <div className="col-span-2 space-y-1"><Label className="text-[11px] text-muted-foreground">Rate (₹)</Label><Input type="number" value={item.rate} onWheel={(e) => e.currentTarget.blur()} onChange={(e) => updateItem(item.id, "rate", Number(e.target.value))} className="h-10 rounded-lg glass-input appearance-none" /></div>
